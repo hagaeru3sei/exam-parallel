@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import asyncio
 import functools
+import math
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
@@ -9,7 +10,7 @@ from more_itertools import chunked
 
 concurrent = 1000
 
-data = list(range(100000))
+data = list(range(1000000))
 groups = list(chunked(data, concurrent))
 
 
@@ -42,11 +43,10 @@ def is_prime(n):
         return True
     elif n % 2 == 0:
         return False
-    i = 3
-    while i*i <= n:
+    sqrt_n = int(math.floor(math.sqrt(n)))
+    for i in range(3, sqrt_n + 1, 2):
         if n % i == 0:
             return False
-        i += 2
     return True
 
 
