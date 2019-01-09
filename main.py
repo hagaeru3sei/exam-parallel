@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 import asyncio
 import functools
-import os
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from joblib import Parallel, delayed
 from more_itertools import chunked
 
-concurrent = int(os.cpu_count() * 10)
+concurrent = 1000
 
-data = list(range(1000000))
+data = list(range(100000))
 groups = list(chunked(data, concurrent))
 
 
@@ -57,7 +57,7 @@ def _func(numbers):
 @profile()
 def exam_process_pool():
 
-    with ProcessPoolExecutor(max_workers=concurrent) as executor:
+    with ProcessPoolExecutor(max_workers=20) as executor:
         #results = [executor.map(_func, group) for group in groups]
         #print('number: {}'.format(results))
         futures = {executor.submit(_func, group): group for group in groups}
@@ -79,7 +79,7 @@ def exam_thread_pool():
     def func(numbers):
         return [is_prime(n) for n in numbers]
 
-    with ThreadPoolExecutor(max_workers=concurrent) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         futures = {executor.submit(func, group): group for group in groups}
         for future in as_completed(futures):
             r = futures[future]
@@ -118,14 +118,33 @@ def exam_asyncio():
     loop.close()
 
 
+@profile()
+def exam_blocking():
+    results = []
+    for group in groups:
+        for num in group:
+            results.append(is_prime(num))
+    return results
+
+
+@profile()
+def exam_joblib():
+    Parallel(n_jobs=20)([delayed(_func)(numbers) for numbers in groups])
+
+
+@profile()
+def exam_joblib_thread():
+    Parallel(n_jobs=20, backend='threading')([delayed(_func)(numbers) for numbers in groups])
+
+
 def main():
     exam_process_pool()
-
     exam_thread_pool()
-
     exam_thread()
-
     exam_asyncio()
+    exam_blocking()
+    exam_joblib()
+    exam_joblib_thread()
 
 
 if __name__ == "__main__":
